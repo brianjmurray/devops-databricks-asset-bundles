@@ -1,0 +1,20 @@
+parameters:
+  - name: workingDirectory
+    type: string
+  - name: azureSubscription
+    type: string
+
+steps:
+  - template: setup-python.yml
+  - template: install-databricks-cli.yml
+  - template: configure-databricks-cli.yml
+    parameters:
+      azureSubscription: ${{ parameters.azureSubscription }}
+  - template: checkout-self.yml
+  - template: run-unit-tests.yml
+    parameters:
+      workingDirectory: ${{ parameters.workingDirectory }}
+  - script: |
+      databricks bundle validate -t $(env)
+    workingDirectory: "$(System.DefaultWorkingDirectory)/${{ parameters.workingDirectory }}"
+    displayName: Validate bundle for $(env) environment

@@ -1,0 +1,23 @@
+parameters:
+  - name: workingDirectory
+    type: string
+  - name: env
+    type: string
+  - name: autoApprove
+    type: boolean
+    default: false
+
+steps:
+  - script: |
+      echo Deploy bundle via Databricks CLI...
+          if [ ${{ parameters.autoApprove }} = "True" ]; then
+            echo ${{ parameters.autoApprove }}
+            echo "databricks bundle deploy -t $(env) --auto-approve"
+            databricks bundle deploy -t $(env) --auto-approve
+          else
+            echo ${{ parameters.autoApprove }}
+            echo "databricks bundle deploy -t $(env)"
+            databricks bundle deploy -t $(env)
+          fi
+    workingDirectory: "$(System.DefaultWorkingDirectory)/${{ parameters.workingDirectory }}"
+    displayName: Deploy job on ${{ parameters.env }} environment

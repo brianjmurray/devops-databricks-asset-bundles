@@ -1,0 +1,29 @@
+parameters:
+  - name: workingDirectory
+    type: string
+  - name: jobNames
+    type: object
+    default: []
+  - name: env
+    type: string
+  - name: waitForJobs
+    type: boolean
+    default: true
+
+steps:
+- ${{ each singleJob in parameters.jobNames }}:
+  - ${{ if eq(parameters.waitForJobs, true) }}:
+    - script: |
+        echo "Running job: ${{ singleJob }}"
+        echo "databricks bundle run ${{ singleJob }} -t ${{ parameters.env }}"
+        databricks bundle run ${{ singleJob }} -t ${{ parameters.env }}
+      workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.workingDirectory }}'
+      displayName: "Run ${{ singleJob }}"
+  - ${{ else }}:
+    - script: |
+        echo "Running job: ${{ singleJob }}"
+        echo "databricks bundle run ${{ singleJob }} -t ${{ parameters.env }} --no-wait"
+        databricks bundle run ${{ singleJob }} -t ${{ parameters.env }} --no-wait
+        echo "Job triggered. Check Databricks UI for status: $(DATABRICKS_HOST)"
+      workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.workingDirectory }}'
+      displayName: "Run ${{ singleJob }}"

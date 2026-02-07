@@ -1,0 +1,95 @@
+trigger:
+  batch: true
+  branches:
+    include:
+      - "*"
+  paths:
+    exclude:
+      - README.md
+      - LICENSE
+      - .github
+
+parameters:
+  - name: projectName
+    type: string
+  - name: workingDirectory
+    type: string
+  - name: jobNames
+    type: object
+    default: []
+  - name: devVariableGroup
+    type: string
+  - name: stagingVariableGroup
+    type: string
+  - name: prodVariableGroup
+    type: string
+  - name: azureSubscription
+    type: string
+  - name: autoApprove
+    type: boolean
+    default: false
+  - name: waitForJobs
+    type: boolean
+    default: true
+
+stages:
+  - stage: Validate
+    condition: |
+      and(ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/dev'))
+    variables:
+      - group: ${{ parameters.devVariableGroup }}
+    jobs:
+      - job: onValidateJob
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - template: steps/validate-databricks-bundle.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              azureSubscription: ${{ parameters.azureSubscription }}
+  - stage: toStaging
+    variables:
+      - group: ${{ parameters.stagingVariableGroup }}
+    condition: |
+      eq(variables['Build.SourceBranch'], 'refs/heads/dev')
+    dependsOn: []
+    jobs:
+      - job: onDevReleaseJob
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - template: steps/validate-databricks-bundle.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              azureSubscription: ${{ parameters.azureSubscription }}
+          - template: steps/deploy-databricks-bundle.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              env: $(env)
+              autoApprove: ${{ parameters.autoApprove }}
+          - template: steps/run-databricks-jobs.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              jobNames: ${{ parameters.jobNames }}
+              env: $(env)
+              waitForJobs: ${{ parameters.waitForJobs }}
+  - stage: toProd
+    variables:
+      - group: ${{ parameters.prodVariableGroup }}
+    condition: |
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    dependsOn: []
+    jobs:
+      - job: onProdReleaseJob
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - template: steps/validate-databricks-bundle.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              azureSubscription: ${{ parameters.azureSubscription }}
+          - template: steps/deploy-databricks-bundle.yml
+            parameters:
+              workingDirectory: ${{ parameters.workingDirectory }}
+              env: $(env)
+              autoApprove: ${{ parameters.autoApprove }}

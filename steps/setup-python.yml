@@ -1,0 +1,12 @@
+steps:
+  - task: UsePythonVersion@0
+    displayName: "Use Python 3.11"
+    inputs:
+      versionSpec: 3.11
+  - script: |
+      python -m pip install --upgrade pip
+      python -m pip install wheel
+      python -m pip install setuptools
+      python -m pip install pytest pytest-cov
+      python -m pip install pyspark
+    displayName: "Install dependencies"
