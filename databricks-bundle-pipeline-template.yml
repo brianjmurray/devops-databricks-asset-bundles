@@ -28,6 +28,9 @@ parameters:
   - name: autoApprove
     type: boolean
     default: false
+  - name: force
+    type: boolean
+    default: false
   - name: waitForJobs
     type: boolean
     default: true
@@ -67,6 +70,7 @@ stages:
               workingDirectory: ${{ parameters.workingDirectory }}
               env: $(env)
               autoApprove: ${{ parameters.autoApprove }}
+              force: ${{ parameters.force }}
           - template: steps/run-databricks-jobs.yml
             parameters:
               workingDirectory: ${{ parameters.workingDirectory }}
@@ -93,3 +97,4 @@ stages:
               workingDirectory: ${{ parameters.workingDirectory }}
               env: $(env)
               autoApprove: ${{ parameters.autoApprove }}
+              force: ${{ parameters.force }}

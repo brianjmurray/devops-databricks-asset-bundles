@@ -92,6 +92,7 @@ extends:
 - `stagingVariableGroup`: Variable group for the staging environment.
 - `prodVariableGroup`: Variable group for the production environment.
 - `autoApprove`: (Optional) Boolean to automatically approve destructive changes during deployment. When set to `true`, adds the `--auto-approve` flag to `databricks bundle deploy` commands, bypassing manual approval prompts for operations that might delete or modify existing resources. Default is `false` for safety. **Use with caution in production environments**.
+- `force`: (Optional) Boolean to force deployment even when remote changes are detected. When set to `true`, adds the `--force` flag to `databricks bundle deploy` commands, allowing the deployment to proceed even if the target environment has been modified outside of the asset bundle. Default is `false` for safety. **Use only after verifying you want to overwrite remote changes**.
 - `waitForJobs`: (Optional) Boolean to wait for Databricks jobs to complete after deployment. When set to `false`, jobs are triggered with `--no-wait` flag and the pipeline continues without waiting. Default is `true`. Set to `false` for long-running jobs (> 1 hour) to avoid pipeline timeouts.
 
 ## Unit Testing
@@ -178,6 +179,51 @@ extends:
     autoApprove: true  # Enable auto-approval for this deployment
     # ... other parameters
 ```
+
+### Force Deployment Feature {#force}
+
+The `force` parameter allows you to override remote changes and force a deployment even when the target environment has been modified outside of the asset bundle. When enabled, it adds the `--force` flag to Databricks bundle deployment commands.
+
+**When to use `force: true`:**
+- The target environment has been modified manually or by another process
+- You've verified that overwriting remote changes is safe and intentional
+- You need to restore a known good state from source control
+- Recovery from configuration drift in the target environment
+
+**When to keep `force: false` (default):**
+- Normal deployments where no conflicts are expected
+- When you want to be alerted if someone made manual changes
+- To prevent accidentally overwriting important manual fixes
+- As a safety check to ensure bundle and target are in sync
+
+**Example with force deployment enabled:**
+```yaml
+extends:
+  template: databricks-bundle-pipeline-template.yml@templates
+  parameters:
+    projectName: 'MyProject'
+    workingDirectory: 'src'
+    force: true  # Force deployment despite remote changes
+    # ... other parameters
+```
+
+### Difference Between `autoApprove` and `force`
+
+While both parameters affect deployment behavior, they serve different purposes:
+
+| Parameter | Purpose | Use Case |
+|-----------|---------|----------|
+| `autoApprove` | Skips manual confirmation prompts for destructive changes (delete/modify resources) | Automated pipelines where you trust the changes being deployed |
+| `force` | Overrides remote changes detected in the target environment | Target was modified outside the bundle and you want to overwrite those changes |
+
+**Can be used together:** You can enable both parameters if you need automated deployments that also override remote changes:
+```yaml
+parameters:
+  autoApprove: true  # Skip confirmation prompts
+  force: true        # Override remote changes
+```
+
+**Best practice:** Start with both parameters set to `false` (default) for safety. Only enable them after understanding the implications and verifying the specific scenario requires them.
 
 **Note:**
 - The pipeline is designed so that validation runs for all branches except `main` and `dev`. For `dev` and `main`, validation is included in the release process to avoid redundant setup steps and speed up deployments.
