@@ -1,6 +1,6 @@
 # devops-databricks-asset-bundles
 
-This repository contains reusable Azure DevOps pipeline templates for deploying Databricks asset bundles. The templates are designed to standardize and streamline the CI/CD process across multiple projects.
+This repository contains reusable Azure DevOps pipeline templates for deploying Databricks Declarative Automation Bundles, formerly Databricks Asset Bundles. The templates are designed to standardize and streamline the CI/CD process across multiple projects.
 
 ## Repository Structure
 ```
@@ -22,7 +22,7 @@ devops-databricks-asset-bundles/
 
 ### databricks-bundle-pipeline-template.yml
 
-This is the main pipeline template for Databricks bundle deployments. It is modularized using step templates for setup, validation, deployment, and job execution. The template supports validation on all branches except `main` and `dev`, and runs validation as part of the release process for `dev` and `main` to avoid redundant setup.
+This is the main pipeline template for Databricks bundle deployments. It is modularized using step templates for setup, validation, deployment, and staging job execution. The template supports validation on all branches except `main` and `dev`, and runs validation as part of the release process for `dev` and `main` to avoid redundant setup.
 
 ### Step Templates (in `steps/`)
 - **checkout-self.yml**: Checks out the repository with credentials and cleans the workspace.
@@ -84,10 +84,10 @@ extends:
 ```
 
 **Parameters:**
-- `projectName`: Name of the project.
-- `workingDirectory`: Directory containing the Databricks bundle.
+- `projectName`: Optional project label retained for consuming pipeline compatibility. It is not used by the template logic.
+- `workingDirectory`: Path to the directory containing the Databricks bundle. In a monorepo with multiple bundles, set this to the specific bundle directory; all validate, deploy, run, and test commands execute from this path.
 - `azureSubscription`: Name of the Azure DevOps service connection used to authenticate with Azure and obtain a Databricks access token.
-- `jobNames`: List of Databricks jobs to run.
+- `jobNames`: List of Databricks jobs to run after staging deployments. Production deploys do not run jobs by default.
 - `devVariableGroup`: Variable group for the development environment.
 - `stagingVariableGroup`: Variable group for the staging environment.
 - `prodVariableGroup`: Variable group for the production environment.
@@ -97,17 +97,17 @@ extends:
 
 ## Unit Testing
 
-The pipeline automatically discovers and runs unit tests from your project's `tests/` directory.
+The pipeline automatically discovers and runs unit tests from the `tests/` directory under your configured `workingDirectory`.
 
 ### How It Works
 - Tests are executed before bundle validation and deployment
-- If a `tests/` directory exists with files matching `test_*.py` or `*_test.py`, pytest runs automatically
+- If `${workingDirectory}/tests/` exists with files matching `test_*.py` or `*_test.py`, pytest runs automatically
 - If no tests are found, the pipeline continues without failing
 - Test results and code coverage reports are published to Azure DevOps
 - Both pytest-style and unittest-style tests are supported
 
 ### Setting Up Tests
-1. Create a `tests/` directory in your project root (same level as your working directory)
+1. Create a `tests/` directory under the directory passed as `workingDirectory`
 2. Add test files following pytest naming conventions:
    - `test_*.py` or `*_test.py`
 3. Write your tests using standard pytest or unittest syntax
@@ -117,11 +117,11 @@ The pipeline automatically discovers and runs unit tests from your project's `te
 YourProject/
 ├── databricks/
 │   ├── src/
-│   └── databricks.yml
-└── tests/
-    ├── __init__.py
-    ├── test_transformations.py
-    └── test_utilities.py
+│   ├── databricks.yml
+│   └── tests/
+│       ├── __init__.py
+│       ├── test_transformations.py
+│       └── test_utilities.py
 ```
 
 ### Test Requirements
@@ -137,7 +137,7 @@ The following testing packages are pre-installed:
 
 ## Job Execution
 
-By default, jobs specified in `jobNames` are executed and the pipeline waits for completion. For long-running jobs that exceed the pipeline timeout (typically 1 hour), set `waitForJobs: false` to trigger jobs without waiting.
+On the `dev` branch staging stage, jobs specified in `jobNames` are executed after deployment and the pipeline waits for completion by default. The `main` branch production stage validates and deploys only; it does not run jobs unless you extend the template. For long-running staging jobs that exceed the pipeline timeout (typically 1 hour), set `waitForJobs: false` to trigger jobs without waiting.
 
 **Example with long-running jobs:**
 ```yaml
@@ -232,9 +232,11 @@ parameters:
   env: $(env)
   ```
 
-## Setting Up Azure Key Vault
+## Authentication and Secrets
 
-Ensure that sensitive information such as Databricks tokens are stored in Azure Key Vault. Configure your Azure DevOps service connection to access the Key Vault and retrieve the secrets.
+The template does not require storing Databricks personal access tokens in Azure Key Vault or Azure DevOps variable groups. `configure-databricks-cli.yml` obtains a short-lived Microsoft Entra access token at runtime with Azure CLI using the Azure DevOps service connection.
+
+Use Azure Key Vault or secured variable groups for application secrets and environment-specific configuration values, such as workspace host names or downstream service credentials. The pipeline identity still needs the required Databricks workspace permissions for the bundle resources it deploys.
 
 ## Contributing
 
