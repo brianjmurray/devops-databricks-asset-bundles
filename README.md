@@ -85,7 +85,7 @@ extends:
 
 **Parameters:**
 - `projectName`: Optional project label retained for consuming pipeline compatibility. It is not used by the template logic.
-- `workingDirectory`: Directory containing the Databricks bundle.
+- `workingDirectory`: Path to the directory containing the Databricks bundle. In a monorepo with multiple bundles, set this to the specific bundle directory; all validate, deploy, run, and test commands execute from this path.
 - `azureSubscription`: Name of the Azure DevOps service connection used to authenticate with Azure and obtain a Databricks access token.
 - `jobNames`: List of Databricks jobs to run after staging deployments. Production deploys do not run jobs by default.
 - `devVariableGroup`: Variable group for the development environment.
