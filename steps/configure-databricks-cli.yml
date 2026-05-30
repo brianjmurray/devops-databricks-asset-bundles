@@ -14,7 +14,6 @@ steps:
         echo "##vso[task.setvariable variable=DATABRICKS_TOKEN]$DATABRICKS_TOKEN"
   - script: |
       echo Configuring Databricks CLI...
-      databricks configure --token
       echo -e "[DATABRICKS_HOST]\n[DATABRICKS_TOKEN]" | databricks configure --token
     env:
       DATABRICKS_HOST: $(DATABRICKS_HOST)

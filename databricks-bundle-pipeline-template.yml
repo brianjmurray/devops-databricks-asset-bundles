@@ -12,6 +12,7 @@ trigger:
 parameters:
   - name: projectName
     type: string
+    default: ""
   - name: workingDirectory
     type: string
   - name: jobNames
